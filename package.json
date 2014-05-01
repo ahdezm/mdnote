@@ -1,0 +1,23 @@
+{
+  "name": "MdNote",
+  "version": "0.0.0",
+  "description": "Convert Markdown to Evernote",
+  "main": "mdnote.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:polikis/MdNote.git"
+  },
+  "keywords": [
+    "markdown",
+    "evernote"
+  ],
+  "author": "polikis",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/polikis/MdNote/issues"
+  },
+  "homepage": "https://github.com/polikis/MdNote"
+}
