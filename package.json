@@ -1,6 +1,6 @@
 {
   "name": "MdNote",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Convert Markdown to Evernote",
   "main": "mdnote.js",
   "scripts": {
@@ -19,5 +19,8 @@
   "bugs": {
     "url": "https://github.com/polikis/MdNote/issues"
   },
-  "homepage": "https://github.com/polikis/MdNote"
+  "homepage": "https://github.com/polikis/MdNote",
+  "dependencies": {
+    "marked": "^0.3.2"
+  }
 }
