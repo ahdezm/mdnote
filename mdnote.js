@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 
-// TODO: Add separator for meta 
 // TODO: Add tag support
 // TODO: Add multimarkdown
 // TODO: Add math support using streams
-// TODO: Use API instead of applescript
+// TODO: Use Evernote API instead of applescript
 
 var argv = require('yargs').argv;
 
@@ -22,7 +21,7 @@ marked.setOptions({
 	tables: true,
 	breaks: true,
 	pedantic: false,
-	sanitize: true,
+	sanitize: false,
 	smartLists: true,
 	smartypants: true
 });
@@ -44,6 +43,7 @@ var math2url = function(latex,done){
 
 function readFile(path){
 	var contents = '';
+	var status = false;
 	var meta = {
 		title:false,
 		tags:false,
@@ -51,30 +51,37 @@ function readFile(path){
 	};
 
 	fs.createReadStream(path).pipe(split()).on('data',function(line){
-		if(!meta.title){
-			var title = line.match(/^Title:\s(.*)|^#+(.+)/);
-			if(!!title){ 
-				meta.title = ((!!title && title[2])?(title[2]):(title[1])).trim();
-				return;
-			}
+		if(/^-+$/.test(line)){
+			status = !status;
+			return;
 		}
 
-		if(!meta.tags){
-			var tags = line.match(/^(Tags:|@)\s(.*)/);
-			if(!!tags){
-				meta.tags = tags[2].split(',').map(function(tag){
-					return tag.trim();
-				});
-				return;
+		if(status){
+			if(!meta.title){
+				var title = line.match(/^Title:\s(.*)|^#+(.+)/);
+				if(!!title){ 
+					meta.title = ((!!title && title[2])?(title[2]):(title[1])).trim();
+					return;
+				}
+			}
+
+			if(!meta.tags){
+				var tags = line.match(/^(Tags:|@)\s(.*)/);
+				if(!!tags){
+					meta.tags = tags[2].split(',').map(function(tag){
+						return tag.trim();
+					});
+					return;
+				}
+				
 			}
 			
-		}
-		
-		if(!meta.book){
-			var book = line.match(/^(Notebook:|=)\s(.*)/);
-			if(!!book){
-				meta.book = book[2].trim();
-				return;
+			if(!meta.book){
+				var book = line.match(/^(Notebook:|=)\s(.*)/);
+				if(!!book){
+					meta.book = book[2].trim();
+					return;
+				}
 			}
 		}
 
@@ -91,13 +98,13 @@ function createNote(meta,contents){
 	var script = 'tell application "Evernote" to create note title "' + escapeStr(meta.title) + '"';
 	script += ' with html "' + escapeStr(html) +'"';
 	script += (!!meta.book)?(' notebook "' + escapeStr(meta.book) + '"'):('');
+	// BUG: There appears to be a bug with Evernote App
 	/*if(!!meta.tags){
 		var tags = (meta.tags.length === 1)? escapeStr(meta.tags[0]): escapeStr('{' + meta.tags.map(function(tag){
 			return '"' + tag + '"';
 		}) + '}');
 		script += ' tags "' + tags + '"';
 	}*/
-
 	applescript.execString(script,function(err,data) {
 		console.log(err || data);
 	});

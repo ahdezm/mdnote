@@ -1,6 +1,6 @@
 {
   "name": "MdNote",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Convert Markdown to Evernote",
   "main": "mdnote.js",
   "scripts": {
@@ -21,6 +21,11 @@
   },
   "homepage": "https://github.com/polikis/MdNote",
   "dependencies": {
-    "marked": "^0.3.2"
+    "applescript": "^0.2.1",
+    "base64-stream": "^0.1.2",
+    "marked": "^0.3.2",
+    "mathmode": "0.0.4",
+    "split": "^0.3.0",
+    "yargs": "^1.2.1"
   }
 }
