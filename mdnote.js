@@ -2,12 +2,17 @@
 
 // TODO: Add tag support
 // TODO: Add multimarkdown
-// TODO: Add math support using streams
+// TODO: Add arguments for math
 // TODO: Use Evernote API instead of applescript
 
-var argv = require('yargs').argv;
+var argv = require('yargs')
+	.boolean('m')
+	.alias('m','meta')
+	.describe('m','Strict meta information, must be delimited by a line of hyphens')
+	.argv;
 
 var fs = require('fs');
+var through = require('through2');
 var split = require('split');
 var base64 = require("base64-stream");
 var math = require("mathmode");
@@ -31,8 +36,11 @@ var escapeStr = function(str){
 };
 
 var math2url = function(latex,done){
+	// TODO: Remove wait period
 	var data = 'data:image/png;base64,';
-	math(latex).pipe(base64.encode()).on('data',function(chunk){
+	math(latex,{
+		dpi:110
+	}).pipe(base64.encode()).on('data',function(chunk){
 		data += chunk;
 	}).on('end',function(){
 		done(null,data);
@@ -42,7 +50,7 @@ var math2url = function(latex,done){
 };
 
 function readFile(path){
-	var contents = '';
+	var contents = [];
 	var status = false;
 	var meta = {
 		title:false,
@@ -50,17 +58,20 @@ function readFile(path){
 		book:false
 	};
 
-	fs.createReadStream(path).pipe(split()).on('data',function(line){
+	fs.createReadStream(path).pipe(split()).pipe(through(function(line,enc,done){
+		line = line.toString();
 		if(/^-+$/.test(line)){
 			status = !status;
+			done();
 			return;
 		}
 
-		if(status){
+		if(status || !argv.meta){
 			if(!meta.title){
 				var title = line.match(/^Title:\s(.*)|^#+(.+)/);
 				if(!!title){ 
 					meta.title = ((!!title && title[2])?(title[2]):(title[1])).trim();
+					done();
 					return;
 				}
 			}
@@ -71,6 +82,7 @@ function readFile(path){
 					meta.tags = tags[2].split(',').map(function(tag){
 						return tag.trim();
 					});
+					done();
 					return;
 				}
 				
@@ -80,14 +92,31 @@ function readFile(path){
 				var book = line.match(/^(Notebook:|=)\s(.*)/);
 				if(!!book){
 					meta.book = book[2].trim();
+					done();
 					return;
 				}
 			}
 		}
 
-		contents += line + '\n';
+		this.push(line);
+		done();
+	})).pipe(through(function(line,enc,done){
+		var self = this;
+		var latex = line.toString().match(/\$\$(.+)\$\$/);
+		if(!!latex && latex.length > 0){
+			math2url(latex[1],function(err,data){
+				var image = '![' + latex[1] +'](' + data + ')';
+				self.push(line.toString().replace(latex[0],image));
+				done();
+			});
+		} else {
+			this.push(line);
+			done();
+		}
+	})).on('data',function(line){
+		contents.push(line);	
 	}).on('end',function(){
-		createNote(meta,contents);
+		createNote(meta,contents.join('\n'));
 	});
 }
 

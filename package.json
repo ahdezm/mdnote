@@ -1,6 +1,6 @@
 {
   "name": "MdNote",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Convert Markdown to Evernote",
   "main": "mdnote.js",
   "scripts": {
@@ -26,6 +26,7 @@
     "marked": "^0.3.2",
     "mathmode": "0.0.4",
     "split": "^0.3.0",
+    "through2": "^0.4.1",
     "yargs": "^1.2.1"
   }
 }
