@@ -2,8 +2,8 @@
 
 // TODO: Add tag support
 // TODO: Add multimarkdown
-// TODO: Add arguments for math
-// TODO: Use Evernote API instead of applescript
+// TODO: Add arguments for math (http://shapeshed.com/command-line-utilities-with-nodejs/)
+// TODO: Use Evernote API instead of applescript (http://dev.evernote.com/doc/articles/authentication.php)
 
 var argv = require('yargs')
 	.boolean('m')
@@ -33,20 +33,6 @@ marked.setOptions({
 
 var escapeStr = function(str){
 	return str.replace(/(?=["\\])/g, '\\');
-};
-
-var math2url = function(latex,done){
-	// TODO: Remove wait period
-	var data = 'data:image/png;base64,';
-	math(latex,{
-		dpi:110
-	}).pipe(base64.encode()).on('data',function(chunk){
-		data += chunk;
-	}).on('end',function(){
-		done(null,data);
-	}).on('error',function(err){
-		done(err);
-	});
 };
 
 function readFile(path){
@@ -102,11 +88,16 @@ function readFile(path){
 		done();
 	})).pipe(through(function(line,enc,done){
 		var self = this;
-		var latex = line.toString().match(/\$\$(.+)\$\$/);
+		line = line.toString();
+
+		var latex = line.match(/\$\$(.+)\$\$/);
 		if(!!latex && latex.length > 0){
-			math2url(latex[1],function(err,data){
-				var image = '![' + latex[1] +'](' + data + ')';
-				self.push(line.toString().replace(latex[0],image));
+			this.push(line.split(latex[0])[0] + '![' + encodeURI(latex[1]) + '](data:image/png;base64,');
+
+			math(latex[1],{dpi:110}).pipe(base64.encode()).on('data',function(data){
+				self.push(data);
+			}).on('end',function(){
+				self.push(')' + line.split(latex[0])[1]);
 				done();
 			});
 		} else {
