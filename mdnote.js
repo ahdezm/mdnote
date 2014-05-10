@@ -2,6 +2,7 @@
 
 // TODO: Add tag support
 // TODO: Add multimarkdown
+// TODO: All math in one process
 // TODO: Add arguments for math (http://shapeshed.com/command-line-utilities-with-nodejs/)
 // TODO: Use Evernote API instead of applescript (http://dev.evernote.com/doc/articles/authentication.php)
 
@@ -24,7 +25,7 @@ marked.setOptions({
 	renderer: new marked.Renderer(),
 	gfm: true,
 	tables: true,
-	breaks: true,
+	breaks: false,
 	pedantic: false,
 	sanitize: false,
 	smartLists: true,
@@ -84,6 +85,7 @@ function readFile(path){
 			}
 		}
 
+		if(line.length < 1){ line = '<br>' }
 		this.push(line);
 		done();
 	})).pipe(through(function(line,enc,done){
@@ -92,14 +94,20 @@ function readFile(path){
 
 		var latex = line.match(/\$\$(.+)\$\$/);
 		if(!!latex && latex.length > 0){
-			this.push(line.split(latex[0])[0] + '![' + encodeURI(latex[1]) + '](data:image/png;base64,');
-
-			math(latex[1],{dpi:110}).pipe(base64.encode()).on('data',function(data){
-				self.push(data);
-			}).on('end',function(){
-				self.push(')' + line.split(latex[0])[1]);
+			if(argv.loadLatex){
+				this.push(line.split(latex[0])[0] + '<img alt="' + latex[1] + '" src="https://chart.googleapis.com/chart?cht=tx&chl=' + encodeURI(latex[1]) + '"></img>' + line.split(latex[0])[1]);
 				done();
-			});
+			} else {
+				this.push(line.split(latex[0])[0] + '<img alt="' + latex[1] + '" src="data:image/png;base64,');
+
+				math(latex[1],{dpi:140}).pipe(base64.encode()).on('data',function(data){
+					self.push(data);
+				}).on('end',function(){
+					self.push('"></img>' + line.split(latex[0])[1]);
+					done();
+				});	
+			}
+			
 		} else {
 			this.push(line);
 			done();

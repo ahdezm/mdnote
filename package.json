@@ -1,6 +1,6 @@
 {
   "name": "MdNote",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Convert Markdown to Evernote",
   "main": "mdnote.js",
   "scripts": {
@@ -24,9 +24,9 @@
     "applescript": "^0.2.1",
     "base64-stream": "^0.1.2",
     "marked": "^0.3.2",
-    "mathmode": "0.0.4",
     "split": "^0.3.0",
     "through2": "^0.4.1",
-    "yargs": "^1.2.1"
+    "yargs": "^1.2.1",
+    "mathmode":"https://github.com/polikis/mathmode/tarball/master"
   }
 }
