@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 
 // TODO: Add tag support
+// TODO: Add check for dev token
+// TODO: Add image support
 // TODO: Add multimarkdown
 // TODO: All math in one process
 // TODO: Add arguments for math (http://shapeshed.com/command-line-utilities-with-nodejs/)
 // TODO: Use Evernote API instead of applescript (http://dev.evernote.com/doc/articles/authentication.php)
+// https://github.com/evernote/evernote-sdk-js/blob/master/sample/client/EDAMTest.js
 
 var argv = require('yargs')
+	.boolean('loadLatex')
 	.boolean('m')
 	.alias('m','meta')
 	.describe('m','Strict meta information, must be delimited by a line of hyphens')
@@ -19,7 +23,13 @@ var base64 = require("base64-stream");
 var math = require("mathmode");
 
 var marked = require('marked');
-var applescript = require('applescript');
+var renderer = new marked.Renderer();
+var Evernote = require('evernote').Evernote;
+
+var config = require('config.json');
+
+var client = new Evernote.Client({token: config.devToken,sandbox:false});
+var noteStore = client.getNoteStore();
 
 marked.setOptions({
 	renderer: new marked.Renderer(),
@@ -32,8 +42,18 @@ marked.setOptions({
 	smartypants: true
 });
 
-var escapeStr = function(str){
-	return str.replace(/(?=["\\])/g, '\\');
+renderer.heading = function(text,level){
+	return '<h' + level + '>' + text + '</h' + level + '>';
+};
+
+renderer.image = function(href,title,text){
+	var out = '<img src="' + href + '" alt="' + text + '"';
+  if (title) {
+    out += ' title="' + title + '"';
+  }
+  out += this.options.xhtml ? '/>' : '>';
+  out += '</img>';
+  return out;
 };
 
 function readFile(path){
@@ -85,7 +105,7 @@ function readFile(path){
 			}
 		}
 
-		if(line.length < 1){ line = '<br>' }
+		if(line.length < 1){ line = '<br></br>'; }
 		this.push(line);
 		done();
 	})).pipe(through(function(line,enc,done){
@@ -95,12 +115,12 @@ function readFile(path){
 		var latex = line.match(/\$\$(.+)\$\$/);
 		if(!!latex && latex.length > 0){
 			if(argv.loadLatex){
-				this.push(line.split(latex[0])[0] + '<img alt="' + latex[1] + '" src="https://chart.googleapis.com/chart?cht=tx&chl=' + encodeURI(latex[1]) + '"></img>' + line.split(latex[0])[1]);
+				this.push(line.split(latex[0])[0] + '<img alt="' + latex[1] + '" src="http://latex.codecogs.com/gif.latex?' + encodeURI(latex[1]) + '"></img>' + line.split(latex[0])[1]);
 				done();
 			} else {
 				this.push(line.split(latex[0])[0] + '<img alt="' + latex[1] + '" src="data:image/png;base64,');
 
-				math(latex[1],{dpi:140}).pipe(base64.encode()).on('data',function(data){
+				math(latex[1],{dpi:130}).pipe(base64.encode()).on('data',function(data){
 					self.push(data);
 				}).on('end',function(){
 					self.push('"></img>' + line.split(latex[0])[1]);
@@ -120,21 +140,20 @@ function readFile(path){
 }
 
 function createNote(meta,contents){
-	var html = marked(contents);
+	var html = marked(contents,{renderer:renderer});
 	meta.title = meta.title || new Date().toString();
 
-	var script = 'tell application "Evernote" to create note title "' + escapeStr(meta.title) + '"';
-	script += ' with html "' + escapeStr(html) +'"';
-	script += (!!meta.book)?(' notebook "' + escapeStr(meta.book) + '"'):('');
-	// BUG: There appears to be a bug with Evernote App
-	/*if(!!meta.tags){
-		var tags = (meta.tags.length === 1)? escapeStr(meta.tags[0]): escapeStr('{' + meta.tags.map(function(tag){
-			return '"' + tag + '"';
-		}) + '}');
-		script += ' tags "' + tags + '"';
-	}*/
-	applescript.execString(script,function(err,data) {
-		console.log(err || data);
+	var note = new Evernote.Note();
+	note.title = meta.title;
+
+	note.content = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">';
+	note.content += '<en-note>' + html + '</en-note>';
+	console.log(note.content);
+
+	noteStore.createNote(note,function(err,note){
+		if(err){
+			console.log(err);
+		}
 	});
 }
 
