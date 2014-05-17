@@ -1,7 +1,7 @@
 -------------------------
 Title: Hello
 Tags: foo,bar
-Notebook: Book1
+Notebook: Physics
 -------------------------
 
 # This is a test

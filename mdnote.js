@@ -135,7 +135,21 @@ function readFile(path){
 	})).on('data',function(line){
 		contents.push(line);	
 	}).on('end',function(){
-		createNote(meta,contents.join('\n'));
+		if(meta.book){
+			noteStore.listNotebooks(function(err,notebooks){
+				var book = notebooks.filter(function(self){
+					return meta.book === self.name;
+				});
+
+				if(book.length > 0 && 'guid' in book[0]){
+					meta.guid = book[0].guid;
+				}
+				createNote(meta,contents.join('\n'));
+			});
+		} else {
+			createNote(meta,contents.join('\n'));
+		}
+		
 	});
 }
 
@@ -145,10 +159,10 @@ function createNote(meta,contents){
 
 	var note = new Evernote.Note();
 	note.title = meta.title;
+	note.notebookGuid = meta.guid || null;
 
 	note.content = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">';
 	note.content += '<en-note>' + html + '</en-note>';
-	console.log(note.content);
 
 	noteStore.createNote(note,function(err,note){
 		if(err){

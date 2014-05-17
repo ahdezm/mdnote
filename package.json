@@ -28,5 +28,6 @@
     "split": "^0.3.0",
     "through2": "^0.4.1",
     "yargs": "^1.2.1"
-  }
+  },
+  "devDependencies": {}
 }
