@@ -137,13 +137,16 @@ function readFile(path){
 	}).on('end',function(){
 		if(meta.book){
 			noteStore.listNotebooks(function(err,notebooks){
-				var book = notebooks.filter(function(self){
-					return meta.book === self.name;
-				});
+				if(!err){
+					var book = notebooks.filter(function(self){
+						return meta.book === self.name;
+					});
 
-				if(book.length > 0 && 'guid' in book[0]){
-					meta.guid = book[0].guid;
+					if(book.length > 0 && 'guid' in book[0]){
+						meta.guid = book[0].guid;
+					}
 				}
+				
 				createNote(meta,contents.join('\n'));
 			});
 		} else {
@@ -151,6 +154,10 @@ function readFile(path){
 		}
 		
 	});
+}
+
+function noteCallback(err,note){
+	console.log(err || '');
 }
 
 function createNote(meta,contents){
@@ -164,9 +171,24 @@ function createNote(meta,contents){
 	note.content = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">';
 	note.content += '<en-note>' + html + '</en-note>';
 
-	noteStore.createNote(note,function(err,note){
-		if(err){
-			console.log(err);
+	var filter = new Evernote.NoteFilter();
+	filter.words = meta.title;
+	filter.notebookGuid = meta.guid || null;
+	var spec = new Evernote.NotesMetadataResultSpec({
+		includeContentLength:true
+	});
+	
+	noteStore.findNotesMetadata(filter,0,1,spec,function(err,self){
+		if(self.notes.length > 0){
+			// TODO: Use checksum instead of length
+			if(self.notes[0].contentLength !== note.content.length){
+				note.guid = self.notes[0].guid;
+				noteStore.updateNote(note,noteCallback);
+			} else {
+				console.log('Update Failed: No changes detected.');
+			}
+		} else {
+			noteStore.createNote(note,noteCallback);
 		}
 	});
 }
