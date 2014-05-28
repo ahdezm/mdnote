@@ -25,9 +25,9 @@
     "evernote": "^1.25.3",
     "marked": "^0.3.2",
     "mathmode": "https://github.com/polikis/mathmode/tarball/master",
+    "nomnom": "^1.6.2",
     "split": "^0.3.0",
-    "through2": "^0.4.1",
-    "yargs": "^1.2.1"
+    "through2": "^0.4.1"
   },
   "devDependencies": {}
 }

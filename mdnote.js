@@ -1,22 +1,35 @@
 #!/usr/bin/env node
 
 // TODO: Add tag support
-// TODO: Add check for dev token
-// TODO: Add image support
-// TODO: Add multimarkdown
+// TODO: Add resources support
 // TODO: All math in one process
-// TODO: Add arguments for math (http://shapeshed.com/command-line-utilities-with-nodejs/)
-// TODO: Use Evernote API instead of applescript (http://dev.evernote.com/doc/articles/authentication.php)
+// TODO: Add option for costum latex packages
 // https://github.com/evernote/evernote-sdk-js/blob/master/sample/client/EDAMTest.js
 
-var argv = require('yargs')
-	.boolean('loadLatex')
-	.boolean('m')
-	.alias('m','meta')
-	.describe('m','Strict meta information, must be delimited by a line of hyphens')
-	.argv;
+var argv = require("nomnom").options({
+	math:{
+		flat:true,
+		default:true,
+		abbr:"m",
+		help:"Compile all latex code in note"
+	},
+	loadLatex:{
+		flag:true,
+		help:"load latex code from codecogs.com"
+	},
+	strict:{
+		flag:true,
+		help:"extract only metadata between line of hyphens"
+	},
+	force:{
+		abbr:"f",
+		flag:true,
+		help:"force note update"
+	}
+}).script('mdnote.js').parse();
 
 var fs = require('fs');
+var pass = require('stream').PassThrough;
 var through = require('through2');
 var split = require('split');
 var base64 = require("base64-stream");
@@ -26,6 +39,7 @@ var marked = require('marked');
 var renderer = new marked.Renderer();
 var Evernote = require('evernote').Evernote;
 
+// TODO: Add check for dev token
 var config = require('config.json');
 
 var client = new Evernote.Client({token: config.devToken,sandbox:false});
@@ -73,7 +87,7 @@ function readFile(path){
 			return;
 		}
 
-		if(status || !argv.meta){
+		if(status || !argv.strict){
 			if(!meta.title){
 				var title = line.match(/^Title:\s(.*)|^#+(.+)/);
 				if(!!title){ 
@@ -108,7 +122,7 @@ function readFile(path){
 		if(line.length < 1){ line = '<br></br>'; }
 		this.push(line);
 		done();
-	})).pipe(through(function(line,enc,done){
+	})).pipe((argv.math)?(through(function(line,enc,done){
 		var self = this;
 		line = line.toString();
 
@@ -132,7 +146,7 @@ function readFile(path){
 			this.push(line);
 			done();
 		}
-	})).on('data',function(line){
+	})):(pass())).on('data',function(line){
 		contents.push(line);	
 	}).on('end',function(){
 		if(meta.book){
@@ -180,8 +194,7 @@ function createNote(meta,contents){
 	
 	noteStore.findNotesMetadata(filter,0,1,spec,function(err,self){
 		if(self.notes.length > 0){
-			// TODO: Use checksum instead of length
-			if(self.notes[0].contentLength !== note.content.length){
+			if(argv.force || self.notes[0].contentLength !== note.content.length){
 				note.guid = self.notes[0].guid;
 				noteStore.updateNote(note,noteCallback);
 			} else {
