@@ -8,7 +8,7 @@
 
 var argv = require("nomnom").options({
 	math:{
-		flat:true,
+		flag:true,
 		default:true,
 		abbr:"m",
 		help:"Compile all latex code in note"
